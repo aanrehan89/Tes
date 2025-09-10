@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Video Downloader - TikTok / Instagram</title>
+  <style>
+    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; padding: 2rem; max-width: 720px; margin: auto; }
+    input[type="text"]{width:100%; padding:0.6rem; margin-bottom:0.6rem;}
+    button{ padding:0.6rem 1rem; font-size:1rem; }
+    .msg{ margin-top:0.8rem; color:#333; }
+    .error{ color: #b00020; }
+  </style>
+</head>
+<body>
+  <h1>Unduh Video TikTok / Instagram</h1>
+  <form id="downloadForm">
+    <label for="url">Masukkan link TikTok atau Instagram:</label><br/>
+    <input id="url" name="url" type="text" placeholder="https://www.tiktok.com/..." required />
+    <button type="submit">Download</button>
+  </form>
+
+  <div class="msg" id="status"></div>
+
+  <script>
+    const form = document.getElementById("downloadForm");
+    const status = document.getElementById("status");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      status.textContent = "Mengirim permintaan...";
+
+      const data = new FormData(form);
+      try {
+        // fetch dengan redirect: 'follow' karena server akan mengirim file langsung
+        const resp = await fetch("/download", {
+          method: "POST",
+          body: data
+        });
+
+        if (!resp.ok) {
+          // respon redirect ke halaman dengan flash -> ambil teks (HTML)
+          const text = await resp.text();
+          status.innerHTML = '<span class="error">Gagal: lihat respon server.</span>';
+          return;
+        }
+
+        // response blob -> buat download link
+        const blob = await resp.blob();
+        // dapatkan filename dari header (opsional)
+        let filename = "video.mp4";
+        const cd = resp.headers.get("content-disposition");
+        if (cd && cd.indexOf("filename=") !== -1) {
+          filename = cd.split("filename=")[1].replace(/['"]/g, "");
+        }
+
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+        status.textContent = "Selesai — file diunduh.";
+      } catch (err) {
+        console.error(err);
+        status.innerHTML = '<span class="error">Terjadi error: ' + err.message + '</span>';
+      }
+    });
+  </script>
+</body>
+</html>
