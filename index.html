@@ -84,7 +84,7 @@ button {
     const gender = tgl > 40 ? "Perempuan" : "Laki-laki";
     const umur = now.getFullYear() - tahun - 
       ((now.getMonth() + 1 < bln || (now.getMonth() + 1 === bln && now.getDate() < tanggal)) ? 1 : 0);
-    showHTML('Memuat data wilayah...');
+    
     // Pakai proxy untuk bypass CORS
     const proxy = "https://api.allorigins.win/raw?url=";
     const baseURL = "https://emsifa.github.io/api-wilayah-indonesia/api";
