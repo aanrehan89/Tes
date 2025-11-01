@@ -1,222 +1,129 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Checker NIK — Hacker Theme</title>
 <style>
-  :root{--bg:#000;--accent:#00ff66;--muted:#8fd9a6}
-  html,body{height:100%;margin:0;background:#000;font-family:Consolas,monospace;color:var(--accent)}
-  .wrap{min-height:100%;display:flex;align-items:center;justify-content:center;padding:28px}
-  .card{width:100%;max-width:760px;background:linear-gradient(180deg,rgba(0,0,0,0.6),rgba(0,0,0,0.7));border-radius:18px;padding:22px;border:2px solid rgba(0,255,102,0.2);box-shadow:0 20px 50px rgba(0,255,102,0.03)}
-  h1{margin:0;color:var(--accent);font-size:30px;text-align:center;letter-spacing:2px}
-  p.lead{color:var(--muted);text-align:center;margin:10px 0 18px}
-  .input{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-bottom:12px}
-  input[type=text]{background:#020202;border:1px solid rgba(0,255,102,0.12);color:var(--accent);padding:12px;border-radius:10px;min-width:280px;font-size:16px;text-align:center}
-  button{background:var(--accent);color:#000;border:none;padding:10px 16px;border-radius:10px;cursor:pointer;font-weight:700}
-  button.ghost{background:transparent;border:1px solid var(--accent);color:var(--accent)}
-  .result{margin-top:18px;padding:16px;border-radius:10px;border:1px solid rgba(0,255,102,0.12);background:linear-gradient(180deg, rgba(0,0,0,0.25), rgba(0,0,0,0.35));color:var(--muted);font-family:monospace}
-  .kv{display:grid;grid-template-columns:36px 1fr;gap:6px 12px;align-items:center}
-  .icon{width:32px;height:32px;display:inline-grid;place-items:center;background:rgba(0,255,102,0.06);border-radius:6px;color:var(--accent)}
-  footer{margin-top:14px;text-align:center;color:#6fbf95;font-size:13px}
-  .err{color:#ff6b6b}
-  @media(max-width:560px){h1{font-size:24px}.card{padding:16px}input[type=text]{min-width:160px}}
+body {
+  background-color: #000;
+  color: #00ff00;
+  font-family: "Courier New", monospace;
+  text-align: center;
+  padding: 20px;
+}
+.container {
+  border: 2px solid #00ff00;
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 0 30px #00ff00;
+  display: inline-block;
+  max-width: 400px;
+}
+input {
+  background: #000;
+  border: 1px solid #00ff00;
+  color: #00ff00;
+  padding: 10px;
+  width: 90%;
+  text-align: center;
+  border-radius: 5px;
+}
+button {
+  background: #00ff00;
+  color: #000;
+  border: none;
+  padding: 10px 20px;
+  margin: 10px 5px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+}
+.result {
+  margin-top: 20px;
+  text-align: left;
+}
+.error {
+  color: #ff3333;
+}
 </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="card" role="main">
-      <h1>Checker NIK — Hacker Theme</h1>
-      <p class="lead">Masukkan NIK (16 digit) lalu klik <strong>Parse</strong>. Hasil: provinsi, kab/kota, kecamatan, tanggal lahir, jenis kelamin, umur.</p>
-
-      <div class="input" aria-label="input nik">
-        <input id="nik" type="text" inputmode="numeric" maxlength="16" placeholder="Contoh: 33012120903870001" />
-        <button id="btnParse">Parse</button>
-        <button id="btnClear" class="ghost">Clear</button>
-      </div>
-
-      <div id="result" class="result">Output akan muncul di sini.</div>
-
-      <footer>Library NIK: <strong>internal</strong> • API Wilayah: <strong>emsifa/api-wilayah-indonesia</strong></footer>
+  <div class="container">
+    <h2>Checker NIK — Hacker Theme</h2>
+    <p>Masukkan NIK (16 digit) lalu klik <b>Parse</b></p>
+    <input type="text" id="nik" maxlength="16" placeholder="Masukkan NIK">
+    <div>
+      <button onclick="parseNIK()">Parse</button>
+      <button onclick="clearResult()">Clear</button>
     </div>
+    <div id="result" class="result"></div>
   </div>
 
-<script>
-/*
-  parseNik - sederhana & robust untuk kebutuhan ini.
-  Mengembalikan: { provCode, regCode, distCode, day, month, year2, fullYear, birthISO, birthDisplay, gender }
-*/
-function parseNik(nik) {
-  if (!/^\d{16}$/.test(nik)) return null;
-  const provCode = nik.slice(0,2);          // e.g. "33"
-  const regCode = nik.slice(0,4);           // e.g. "3301"
-  const distCode = nik.slice(0,6);          // e.g. "330101"
-  let day = parseInt(nik.slice(6,8),10);
-  const month = parseInt(nik.slice(8,10),10);
-  const yy = parseInt(nik.slice(10,12),10);
-
-  let gender = 'Laki-laki';
-  if (day > 40) { day -= 40; gender = 'Perempuan'; }
-
-  // Determine full year using current year pivot
-  const now = new Date();
-  const pivot = now.getFullYear() % 100; // e.g., 2025 -> 25
-  const fullYear = (yy <= pivot) ? (2000 + yy) : (1900 + yy);
-
-  // Validate month/day somewhat
-  const mm = Math.max(1, Math.min(12, month));
-  const dd = Math.max(1, Math.min(31, day));
-
-  // Build ISO date safely (no timezone issues)
-  const birthISO = `${fullYear.toString().padStart(4,'0')}-${String(mm).padStart(2,'0')}-${String(dd).padStart(2,'0')}`;
-  const birthDisplay = `${String(dd).padStart(2,'0')}-${String(mm).padStart(2,'0')}-${fullYear}`;
-
-  return {
-    nik, provCode, regCode, distCode,
-    day: dd, month: mm, yy, fullYear,
-    birthISO, birthDisplay, gender
-  };
-}
-
-/* umur dari birthISO */
-function calcAge(birthISO) {
-  const b = new Date(birthISO + 'T00:00:00');
-  const today = new Date();
-  let age = today.getFullYear() - b.getFullYear();
-  const m = today.getMonth() - b.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < b.getDate())) age--;
-  return age;
-}
-
-/* zodiak (optional) */
-function getZodiac(day, month) {
-  const d = day, m = month;
-  if((m==1 && d<=19) || (m==12 && d>=22)) return 'Capricorn';
-  if((m==1 && d>=20) || (m==2 && d<=18)) return 'Aquarius';
-  if((m==2 && d>=19) || (m==3 && d<=20)) return 'Pisces';
-  if((m==3 && d>=21) || (m==4 && d<=19)) return 'Aries';
-  if((m==4 && d>=20) || (m==5 && d<=20)) return 'Taurus';
-  if((m==5 && d>=21) || (m==6 && d<=20)) return 'Gemini';
-  if((m==6 && d>=21) || (m==7 && d<=22)) return 'Cancer';
-  if((m==7 && d>=23) || (m==8 && d<=22)) return 'Leo';
-  if((m==8 && d>=23) || (m==9 && d<=22)) return 'Virgo';
-  if((m==9 && d>=23) || (m==10 && d<=22)) return 'Libra';
-  if((m==10 && d>=23) || (m==11 && d<=21)) return 'Scorpio';
-  if((m==11 && d>=22) || (m==12 && d<=21)) return 'Sagittarius';
-  return '';
-}
-
-/* helper untuk menampilkan hasil */
-function showResult(html) {
-  document.getElementById('result').innerHTML = html;
-}
-
-/* Ambil nama provinsi -> return string or null */
-async function fetchProvinces() {
-  const res = await fetch('https://emsifa.github.io/api-wilayah-indonesia/api/provinces.json', {cache:'no-store'});
-  if (!res.ok) throw new Error('prov fetch failed');
-  return await res.json();
-}
-
-/* Ambil regencies by province id (provCode like '33') -> array */
-async function fetchRegencies(provCode) {
-  const res = await fetch(`https://emsifa.github.io/api-wilayah-indonesia/api/regencies/${provCode}.json`, {cache:'no-store'});
-  if (!res.ok) throw new Error('reg fetch failed');
-  return await res.json();
-}
-
-/* Ambil districts by regency id (regCode like '3301') -> array */
-async function fetchDistricts(regCode) {
-  const res = await fetch(`https://emsifa.github.io/api-wilayah-indonesia/api/districts/${regCode}.json`, {cache:'no-store'});
-  if (!res.ok) throw new Error('dist fetch failed');
-  return await res.json();
-}
-
-/* MAIN flow when Parse clicked */
-document.getElementById('btnParse').addEventListener('click', async () => {
-  const raw = document.getElementById('nik').value.trim();
-  showResult('Memproses...');
-  const nik = raw.replace(/\D/g,'');
-
-  if (!/^\d{16}$/.test(nik)) {
-    showResult(`<span class="err">❗ NIK harus 16 digit angka.</span>`);
-    return;
-  }
-
-  const p = parseNik(nik);
-  if (!p) { showResult(`<span class="err">❗ Gagal parse NIK.</span>`); return; }
-
-  // compute basic fields
-  const age = calcAge(p.birthISO);
-  const zodiac = getZodiac(p.day, p.month);
-
-  // Now attempt to resolve region names via Emsifa
-  try {
-    // 1) provinces list
-    const provinces = await fetchProvinces(); // array of { id, name }
-    const provObj = provinces.find(x => String(x.id) === p.provCode);
-    const provName = provObj ? provObj.name : null;
-
-    // 2) regencies (kab) — use provCode for endpoint, and match id === regCode
-    let kabName = null;
-    try {
-      const regencies = await fetchRegencies(p.provCode);
-      const regObj = regencies.find(x => String(x.id) === p.regCode);
-      kabName = regObj ? regObj.name : null;
-    } catch(e) {
-      // if regencies fetch fails, leave null; we won't throw full error yet
-      kabName = null;
+  <script>
+  async function parseNIK() {
+    const nik = document.getElementById("nik").value.trim();
+    const resultDiv = document.getElementById("result");
+    if (nik.length !== 16) {
+      resultDiv.innerHTML = '<p class="error">⚠️ NIK harus 16 digit!</p>';
+      return;
     }
 
-    // 3) districts (kec) — use regCode for endpoint, match id === distCode
-    let kecName = null;
+    const kodeProv = nik.substring(0, 2);
+    const kodeKab = nik.substring(2, 4);
+    const kodeKec = nik.substring(4, 6);
+    const tgl = parseInt(nik.substring(6, 8));
+    const bln = parseInt(nik.substring(8, 10));
+    const thn = parseInt(nik.substring(10, 12));
+
+    let tahun = thn + 2000;
+    const now = new Date();
+    if (tahun > now.getFullYear()) tahun -= 100;
+
+    let tanggal = tgl > 40 ? tgl - 40 : tgl;
+    const gender = tgl > 40 ? "Perempuan" : "Laki-laki";
+    const umur = now.getFullYear() - tahun - 
+      ((now.getMonth() + 1 < bln || (now.getMonth() + 1 === bln && now.getDate() < tanggal)) ? 1 : 0);
+
+    // Pakai proxy untuk bypass CORS
+    const proxy = "https://api.allorigins.win/raw?url=";
+    const baseURL = "https://emsifa.github.io/api-wilayah-indonesia/api";
+    
     try {
-      const districts = await fetchDistricts(p.regCode);
-      const distObj = districts.find(x => String(x.id) === p.distCode);
-      kecName = distObj ? distObj.name : null;
-    } catch(e) {
-      kecName = null;
+      const provData = await fetch(`${proxy}${baseURL}/provinces.json`).then(res => res.json());
+      const prov = provData.find(p => p.id.startsWith(kodeProv)) || {};
+      
+      let kab = {}, kec = {};
+      if (prov.id) {
+        const kabData = await fetch(`${proxy}${baseURL}/regencies/${prov.id}.json`).then(res => res.json());
+        kab = kabData.find(k => k.id.substring(2,4) === kodeKab) || {};
+
+        if (kab.id) {
+          const kecData = await fetch(`${proxy}${baseURL}/districts/${kab.id}.json`).then(res => res.json());
+          kec = kecData.find(k => k.id.substring(4,6) === kodeKec) || {};
+        }
+      }
+
+      resultDiv.innerHTML = `
+        <p><b>ID</b>: ${nik}</p>
+        <p>Provinsi: ${prov.name || '-'}</p>
+        <p>Kabupaten/Kota: ${kab.name || '-'}</p>
+        <p>Kecamatan: ${kec.name || '-'}</p>
+        <p>Tanggal Lahir: ${tanggal.toString().padStart(2, '0')}-${bln.toString().padStart(2, '0')}-${tahun}</p>
+        <p>Jenis Kelamin: ${gender}</p>
+        <p>Umur: ${umur} tahun</p>
+        <hr>
+        <small>Library: internal • API wilayah: emsifa + proxy allorigins</small>
+      `;
+    } catch (e) {
+      resultDiv.innerHTML = `<p class="error">❌ Gagal memuat data wilayah.<br>(${e.message})</p>`;
     }
-
-    // Build display (use '-' when unknown)
-    const provDisplay = provName || '-';
-    const kabDisplay = kabName || '-';
-    const kecDisplay = kecName || '-';
-
-    // Compose nice result HTML
-    const out = `
-<div class="kv"><div class="icon">ID</div><div><b>NIK:</b> ${p.nik}</div></div>
-<div style="height:8px"></div>
-<div class="kv"><div class="icon">🏙️</div><div><b>Provinsi:</b> ${provDisplay}</div></div>
-<div class="kv"><div class="icon">🏘️</div><div><b>Kabupaten/Kota:</b> ${kabDisplay}</div></div>
-<div class="kv"><div class="icon">📍</div><div><b>Kecamatan:</b> ${kecDisplay}</div></div>
-<div class="kv"><div class="icon">📅</div><div><b>Tanggal Lahir:</b> ${p.birthDisplay}</div></div>
-<div class="kv"><div class="icon">🚻</div><div><b>Jenis Kelamin:</b> ${p.gender}</div></div>
-<div class="kv"><div class="icon">🎂</div><div><b>Umur:</b> ${age} tahun</div></div>
-<div class="kv"><div class="icon">✨</div><div><b>Zodiak:</b> ${zodiac || '-'}</div></div>
-    `;
-    showResult(out);
-
-  } catch (err) {
-    // If any fetch fails we inform user but still show parsed birth/gender/age
-    const minimal = `
-<div class="kv"><div class="icon">ID</div><div><b>NIK:</b> ${p.nik}</div></div>
-<div style="height:8px"></div>
-<div class="kv"><div class="icon">📅</div><div><b>Tanggal Lahir:</b> ${p.birthDisplay}</div></div>
-<div class="kv"><div class="icon">🚻</div><div><b>Jenis Kelamin:</b> ${p.gender}</div></div>
-<div class="kv"><div class="icon">🎂</div><div><b>Umur:</b> ${age} tahun</div></div>
-<div style="height:8px"></div>
-<div style="color:#ff8b8b"><b>❌ Gagal memuat data wilayah.</b><br>(${err.message})</div>
-    `;
-    showResult(minimal);
   }
-});
 
-/* Clear */
-document.getElementById('btnClear').addEventListener('click', () => {
-  document.getElementById('nik').value = '';
-  showResult('Output akan muncul di sini.');
-});
-</script>
+  function clearResult() {
+    document.getElementById("nik").value = "";
+    document.getElementById("result").innerHTML = "";
+  }
+  </script>
 </body>
 </html>
